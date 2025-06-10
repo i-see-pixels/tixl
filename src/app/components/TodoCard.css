@@ -1,0 +1,137 @@
+/* app/components/TodoCard.module.css */
+
+.todoCard {
+    background-color: white; /* Card background */
+    border-radius: 6px; /* Rounded corners for cards */
+    padding: 12px; /* Padding inside the card */
+    margin-bottom: 8px; /* Space between cards */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Subtle card shadow */
+    display: flex;
+    align-items: flex-start; /* Align items to the top in case of multi-line text */
+    cursor: grab; /* Indicate draggable */
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    position: relative; /* For drag-and-drop indicators */
+    word-break: break-word; /* Prevent long words from breaking layout */
+    line-height: 1.4;
+}
+
+.todoCard:hover {
+     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.todoCard.completed {
+    opacity: 0.7; /* Reduce opacity for completed cards */
+}
+
+.todoCard.dragging {
+     opacity: 0.4;
+     transform: rotate(2deg); /* Visual flair when dragging */
+     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+     cursor: grabbing;
+}
+
+/* Drag-and-drop indicators */
+.todoCard.dragOverAbove::before {
+    content: '';
+    position: absolute;
+    top: -4px; /* Place indicator slightly outside */
+    left: 0;
+    width: 100%;
+    height: 4px; /* Thicker indicator */
+    background-color: #007bff;
+    z-index: 10;
+    border-radius: 2px;
+    animation: pulseBorder 0.8s infinite alternate;
+}
+
+.todoCard.dragOverBelow::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; /* Place indicator slightly outside */
+    left: 0;
+    width: 100%;
+    height: 4px; /* Thicker indicator */
+    background-color: #007bff;
+    z-index: 10;
+    border-radius: 2px;
+    animation: pulseBorder 0.8s infinite alternate;
+}
+
+@keyframes pulseBorder {
+    from { opacity: 0.5; }
+    to { opacity: 1; }
+}
+
+
+.checkbox {
+    margin-top: 3px; /* Align checkbox nicely with text */
+    margin-right: 10px;
+    flex-shrink: 0; /* Prevent checkbox from shrinking */
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.todoText {
+    flex-grow: 1; /* Allow text to take available space */
+    font-size: 14px;
+    color: #333;
+    cursor: text; /* Indicate click to edit */
+    margin-right: 10px; /* Space for buttons */
+}
+
+.completed .todoText {
+    text-decoration: line-through;
+    color: #888;
+}
+
+/* Edit Form within card */
+.editForm {
+    display: flex;
+    flex-direction: column; /* Stack input and potentially buttons */
+    flex-grow: 1;
+}
+
+.editInput {
+    border: 1px solid #007bff; /* Highlight border when editing */
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%; /* Input fills card width */
+    box-sizing: border-box; /* Include padding and border in element's total width */
+    margin-bottom: 8px; /* Space below input if buttons are present */
+}
+
+/* Hide default buttons within edit form if using Enter/Blur save */
+ .editForm button {
+     display: none;
+ }
+
+
+/* Action buttons (delete, potentially edit icon if re-added) */
+.deleteButton {
+    background: none; /* No background */
+    border: none;
+    padding: 4px; /* Smaller padding for icon button */
+    font-size: 0; /* Hide text */
+    margin-left: auto; /* Push to the right */
+    opacity: 0.7;
+    flex-shrink: 0; /* Prevent button from shrinking */
+    color: #dc3545; /* Red color for trash icon */
+    transition: opacity 0.2s ease, color 0.2s ease;
+    display: flex; /* Use flexbox to center icon */
+    align-items: center;
+    justify-content: center;
+    width: 24px; /* Fixed size for icon button */
+    height: 24px;
+    border-radius: 4px;
+}
+
+.deleteButton:hover {
+    opacity: 1;
+    color: #c82333; /* Darker red on hover */
+    background-color: rgba(220, 53, 69, 0.1); /* Subtle hover background */
+}
+
+/* If you re-add the edit icon button */
+/* .editButton { ... similar styles to deleteButton, different color/hover } */
