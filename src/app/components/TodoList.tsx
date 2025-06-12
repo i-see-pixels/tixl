@@ -338,7 +338,7 @@ const TodoList: React.FC = () => {
       </div>
 
       {/* Content Area - Conditionally show/hide */}
-      <div className={`.content ${isCollapsed ? 'collapsedContent' : ''}`}>
+      <div className={`content ${isCollapsed ? 'collapsedContent' : ''}`}>
         <ul className={'todoList'}>
           {/* Render regular todo cards */}
           {todos.map((todo) => (

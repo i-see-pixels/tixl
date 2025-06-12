@@ -68,8 +68,8 @@
     margin-right: 10px;
     flex-shrink: 0; /* Prevent checkbox from shrinking */
     cursor: pointer;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
 }
 
 .todoText {
