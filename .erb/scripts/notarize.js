@@ -1,7 +1,11 @@
-const { notarize } = require('@electron/notarize');
+let notarize
 const { build } = require('../../package.json');
 
 exports.default = async function notarizeMacos(context) {
+    const module = await import('@electron/notarize');
+    notarize = module.notarize;
+  }
+
   const { electronPlatformName, appOutDir } = context;
   if (electronPlatformName !== 'darwin') {
     return;

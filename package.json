@@ -1,5 +1,6 @@
 {
   "name": "tixl",
+  "version": "0.1.0",
   "description": "A foundation for scalable desktop apps",
   "keywords": [
     "electron",
@@ -177,8 +178,8 @@
     "webpack-merge": "^6.0.1"
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "Tixl",
+    "appId": "org.erb.Tixl",
     "asar": true,
     "afterSign": ".erb/scripts/notarize.js",
     "asarUnpack": "**\\*.{node,dll}",
