@@ -19,9 +19,10 @@ import fs from 'fs/promises'; // For file system operations
 // Define the path for your data file
 const USER_DATA_PATH = app.getPath('userData');
 const TODOS_FILE_PATH = path.join(USER_DATA_PATH, 'todos.json');
+const WINDOW_STATE_FILE_PATH = path.join(USER_DATA_PATH, 'window-state.json');
 
 const TITLE_BAR_HEIGHT_PX = 30; // Matches your CSS .titleBar height
-let currentExpandedHeight = 450; // Default height when expanded (matches initial window height)
+let currentExpandedHeight = 300; // Default height when expanded (matches initial window height)
 let mainWindow: BrowserWindow | null = null;
 
 class AppUpdater {
@@ -50,15 +51,25 @@ ipcMain.on('close', () => {
 ipcMain.on('toggle-collapse', () => {
   if (mainWindow) {
     const [width, height] = mainWindow.getSize();
-
-    if (height > TITLE_BAR_HEIGHT_PX) {
+    
+    // Add some tolerance for height comparison to handle potential rounding issues
+    const isCurrentlyExpanded = height > TITLE_BAR_HEIGHT_PX + 10;
+    
+    if (isCurrentlyExpanded) {
       // If currently expanded, store current height and collapse
       currentExpandedHeight = height; // Save current height before collapsing
+      log.info(`Collapsing window from height ${height} to ${TITLE_BAR_HEIGHT_PX}`);
       mainWindow.setSize(width, TITLE_BAR_HEIGHT_PX, true); // true for smooth animation
     } else {
       // If currently collapsed, restore to stored expanded height
-      mainWindow.setSize(width, currentExpandedHeight, true); // true for smooth animation
+      // Ensure we have a reasonable expanded height
+      const targetHeight = Math.max(currentExpandedHeight, 300);
+      log.info(`Expanding window from height ${height} to ${targetHeight}`);
+      mainWindow.setSize(width, targetHeight, true); // true for smooth animation
     }
+    
+    // Save window state after toggle
+    setTimeout(() => saveWindowState(), 100); // Small delay to ensure resize is complete
   }
 });
 
@@ -120,6 +131,55 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
+// --- Window State Management ---
+const saveWindowState = async () => {
+  if (!mainWindow) return;
+  
+  try {
+    const [width, height] = mainWindow.getSize();
+    const [x, y] = mainWindow.getPosition();
+    const isMaximized = mainWindow.isMaximized();
+    
+    const windowState = {
+      width,
+      height,
+      x,
+      y,
+      isMaximized,
+      currentExpandedHeight,
+    };
+    
+    await fs.mkdir(path.dirname(WINDOW_STATE_FILE_PATH), { recursive: true });
+    await fs.writeFile(WINDOW_STATE_FILE_PATH, JSON.stringify(windowState, null, 2), {
+      encoding: 'utf-8',
+    });
+    log.info('Window state saved successfully.');
+  } catch (error) {
+    log.error('Failed to save window state:', error);
+  }
+};
+
+const loadWindowState = async () => {
+  try {
+    const data = await fs.readFile(WINDOW_STATE_FILE_PATH, { encoding: 'utf-8' });
+    if (!data.trim()) {
+      log.info('Window state file is empty, using defaults.');
+      return null;
+    }
+    
+    const windowState = JSON.parse(data);
+    log.info('Window state loaded successfully.');
+    return windowState;
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      log.info('Window state file not found, using defaults.');
+      return null;
+    }
+    log.error('Failed to load window state:', error);
+    return null;
+  }
+};
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
@@ -161,26 +221,41 @@ const createWindow = async () => {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth } = primaryDisplay.workAreaSize;
   const screenPadding = 60; // Padding from the right edge of the screen
-  const windowWidth = 300; // Width of the window
-  const windowHeight = 300; // Height of the window
+  
+  // Load saved window state or use defaults
+  const savedState = await loadWindowState();
+  const windowWidth = savedState?.width || 300;
+  const windowHeight = savedState?.height || 300;
+  const windowX = savedState?.x ?? (screenWidth - (windowWidth + screenPadding));
+  const windowY = savedState?.y ?? screenPadding;
+  
+  // Update the current expanded height if we have saved state
+  if (savedState?.currentExpandedHeight) {
+    currentExpandedHeight = savedState.currentExpandedHeight;
+  }
 
   mainWindow = new BrowserWindow({
     frame: false,
     alwaysOnTop: true,
-    titleBarStyle: 'hidden',
+    titleBarStyle: 'hiddenInset', 
     transparent: true,
     show: false,
     width: windowWidth,
     height: windowHeight,
+    x: windowX,
+    y: windowY,
     roundedCorners: true,
-    x: screenWidth - (windowWidth + screenPadding),
-    y: screenPadding,
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
+    // macOS-specific properties to ensure no frame is shown
+    ...(process.platform === 'darwin' && {
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 0, y: 0 }, // Move traffic lights off-screen
+    }),
   });
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
@@ -201,14 +276,24 @@ const createWindow = async () => {
     if (mainWindow && !mainWindow.isMinimized()) {
       // Only update if not minimized and not currently collapsed (i.e., user is truly resizing the content area)
       const currentHeight = mainWindow.getSize()[1];
-      if (currentHeight > TITLE_BAR_HEIGHT_PX + 5) {
+      if (currentHeight > TITLE_BAR_HEIGHT_PX + 10) {
         // Add a small buffer to avoid misinterpreting title bar height as a resize
         currentExpandedHeight = currentHeight;
+        log.info(`Updated expanded height to: ${currentExpandedHeight}`);
       }
     }
+    // Save window state after resize
+    saveWindowState();
   });
 
-  mainWindow.on('closed', () => {
+  mainWindow.on('move', () => {
+    // Save window state after move
+    saveWindowState();
+  });
+
+  mainWindow.on('close', () => {
+    // Save window state before closing
+    saveWindowState();
     mainWindow = null;
   });
 
